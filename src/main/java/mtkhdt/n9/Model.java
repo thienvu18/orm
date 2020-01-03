@@ -1,9 +1,12 @@
 package mtkhdt.n9;
 
+import mtkhdt.n9.annotation.Column;
 import mtkhdt.n9.annotation.Table;
+import mtkhdt.n9.database.Connector;
 import mtkhdt.n9.query.Query;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -15,11 +18,12 @@ import java.util.Map;
 public class Model {
     private String tableName;
     private Map<String, Object> columnsValue;
-    private Query query;
+    private Query.QueryBuilder queryBuilder;
 
     public Model(String tableName) {
         this.tableName = tableName.toLowerCase();
         columnsValue = new HashMap<>();
+        queryBuilder = new Query.QueryBuilder(Connector.getInstance().getDialect(), tableName);
     }
 
     public Model() {
@@ -32,12 +36,12 @@ public class Model {
             }
         }
         columnsValue = new HashMap<>();
+        queryBuilder = new Query.QueryBuilder(Connector.getInstance().getDialect(), tableName);
     }
 
     public static Model table(String tableName) {
         return new Model(tableName);
     }
-
 
     private void getValueFromResultSet(ResultSet rs) throws SQLException {
         ResultSetMetaData meta = rs.getMetaData();
@@ -86,11 +90,57 @@ public class Model {
         }
     }
 
+    private void columnValuesFromAnnotation() {
+        for (Class c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            Field[] fields = c.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(Column.class)) {
+                    Column bc = field.getAnnotation(Column.class);
+                    String name = bc.name();
+                    if (name.equals("")) name = field.getName();
+
+                    name = name.toLowerCase();
+
+                    try {
+                        Object val = field.get(this);
+                        put(name, val);
+                    } catch (IllegalAccessException ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+    private void columnValuesToAnnotation() {
+        for (Class c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+            Field[] fields = c.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(Column.class)) {
+
+                    Column bc = field.getAnnotation(Column.class);
+                    String name = bc.name();
+                    if (name.equals("")) name = field.getName();
+
+                    name = name.toLowerCase();
+                    try {
+                        Object val = get(name);
+                        field.set(this, val);
+                    } catch (IllegalAccessException ignored) {
+                    }
+                }
+            }
+        }
+    }
+
+
     /**
      * @return generatedId if exists, otherwise 0
      */
     public long create() throws Exception {
-        return 0;
+        columnValuesToAnnotation();
+        String sql = queryBuilder.setUpdateColumns(columnsValue).build().buildInsertQuery();
+        long id = Connector.getInstance().executeUpdate(sql, true);
+        return id;
     }
 
     /**
