@@ -9,8 +9,8 @@
         <module name="orm" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="orm" target="1.5" />
+    <bytecodeTargetLevel target="11">
+      <module name="orm" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>
