@@ -1,11 +1,12 @@
+import mtkhdt.n9.model.Model;
 import mtkhdt.n9.annotation.Column;
 import mtkhdt.n9.annotation.PrimaryKey;
 import mtkhdt.n9.annotation.Table;
-import mtkhdt.n9.model.Model;
 
-@Table(name = "students")
-public class Student extends Model {
+@Table(name = "students2")
+public class Student2 extends Model {
     @Column
+    @PrimaryKey
     String mssv;
 
     @Column
@@ -13,6 +14,6 @@ public class Student extends Model {
 
     @Override
     public String toString() {
-        return "MSSV: "+ mssv + ", Name: " + name;
+        return "MSSV: " + mssv + ", Name: " + name;
     }
 }
