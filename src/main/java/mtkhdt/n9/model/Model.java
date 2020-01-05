@@ -123,8 +123,8 @@ public class Model {
 
     //Delete current object
     public void remove() throws SQLException, ClassNotFoundException {
-        makeWhereParamForSelfUpdate();
         resetQueryParams();
+        makeWhereParamForSelfUpdate();
         delete();
     }
 
