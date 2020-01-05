@@ -2,6 +2,7 @@ package mtkhdt.n9.connection;
 
 import mtkhdt.n9.model.QueryClause;
 import mtkhdt.n9.query.*;
+import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
 import java.sql.DriverManager;
@@ -65,7 +66,54 @@ public class MySqlConnection extends Connection {
 
     @Override
     protected String compileSelectQuery(SelectQuery query) {
-        return null;
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT * FROM ");
+        // FROM
+        sql.append(query.getTableName());
+        // WHERE
+        QueryClause whereClause = query.getWhereClause();
+
+        if (whereClause != null) {
+            String  whereClauseSQL =  whereClause.buildSqlClause();
+            if (whereClauseSQL != null && whereClauseSQL.isEmpty() == false) {
+                sql.append(" WHERE ");
+                sql.append(whereClauseSQL);
+            }
+        }
+        // GROUP BY
+        if (query.getGroupByColumns().size() != 0) {
+            String groupByValue =  String.join(", ", query.getGroupByColumns());
+            sql.append(" GROUP BY ").append(groupByValue);
+        }
+
+        // HAVING
+        if (query.getHavingClause() != null) {
+            Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingValue = query.getHavingClause();
+            String operator = "";
+            switch (havingValue.getValue1()) {
+                case EQUAL:
+                    operator = "=";
+            }
+            Pair<HavingFunction, String> columnFunction = havingValue.getValue0();
+            switch (columnFunction.getValue0()) {
+                case AVG:
+                    sql.append(" HAVING ").append("AVG(").append(columnFunction.getValue1()).append(")").append(operator).append(havingValue.getValue2());
+                    break;
+                case MAX:
+                    sql.append(" HAVING ").append("MAX(").append(columnFunction.getValue1()).append(")").append(operator).append(havingValue.getValue2());
+                    break;
+                case MIN:
+                    sql.append(" HAVING ").append("MIN(").append(columnFunction.getValue1()).append(")").append(operator).append(havingValue.getValue2());
+                    break;
+                case COUNT:
+                    sql.append(" HAVING ").append("COUNT(").append(columnFunction.getValue1()).append(")").append(operator).append(havingValue.getValue2());
+                    break;
+                case SUM:
+                    sql.append(" HAVING ").append("SUM(").append(columnFunction.getValue1()).append(")").append(operator).append(havingValue.getValue2());
+                    break;
+            }
+        }
+        return sql.toString();
     }
 
     @Override
@@ -102,7 +150,6 @@ public class MySqlConnection extends Connection {
             }
         }
 
-        System.out.println(sql.toString());
         return sql.toString();
     }
 }

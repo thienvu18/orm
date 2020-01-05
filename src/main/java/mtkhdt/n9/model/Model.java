@@ -31,6 +31,8 @@ public class Model {
 
     private Set<Triplet<String, CompareOperator, Object>> orWhereParams;
     private Set<Triplet<String, CompareOperator, Object>> havingParams;
+    private QueryClause whereClause;
+    private Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingClause;
     private Set<Triplet<String, CompareOperator, Object>> orHavingParams;
 
     public Model() {
@@ -171,9 +173,31 @@ public class Model {
     }
 
     public <T extends Model> T where(String column, CompareOperator operator, Object value) {
-        if (columnsData.containsKey(column)) {
-            whereParams.add(new Triplet<>(column, operator, value));
+        if (whereClause == null) {
+            whereClause = new MonoQueryClause(column, operator, value);
         }
+        else {
+            QueryClause temp = new MonoQueryClause(column, operator, value);
+            whereClause = new BinaryQueryClause(temp, CompareOperator.AND,whereClause);
+        }
+//        if (columnsData.containsKey(column)) {
+//            whereParams.add(new Triplet<>(column, operator, value));
+//        }
+
+        return (T) this;
+    }
+
+    public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
+        if (whereClause == null) {
+            whereClause = new MonoQueryClause(column, operator, value);
+        }
+        else {
+            QueryClause temp = new MonoQueryClause(column, operator, value);
+            whereClause = new BinaryQueryClause(temp, CompareOperator.OR,whereClause);
+        }
+//        if (columnsData.containsKey(column)) {
+//            whereParams.add(new Triplet<>(column, operator, value));
+//        }
 
         return (T) this;
     }
@@ -191,9 +215,16 @@ public class Model {
         return (T) this;
     }
 
-    public <T extends Model> T having(String column, CompareOperator operator, Object value) {
+//    public <T extends Model> T having(String column, CompareOperator operator, Object value) {
+//        if (columnsData.containsKey(column)) {
+//            havingParams.add(new Triplet<>(column, operator, value));
+//        }
+//        return (T) this;
+//    }
+
+    public <T extends Model> T having(HavingFunction havingFunction, String column, CompareOperator operator, Object value) {
         if (columnsData.containsKey(column)) {
-            havingParams.add(new Triplet<>(column, operator, value));
+            havingClause = new Triplet<>(new Pair<HavingFunction, String>(havingFunction, column), operator, value);
         }
 
         return (T) this;
@@ -215,7 +246,7 @@ public class Model {
 
     private SelectQuery buildSelectQuery() {
         //TODO: Build select query
-        return new SelectQuery(tableName, columnsData, selectColumns, groupByColumns, whereParams, havingParams);
+        return new SelectQuery(tableName, columnsData, selectColumns, groupByColumns, whereClause, havingClause);
     }
 
     private ModifyQuery buildModifyQuery() {
@@ -256,6 +287,8 @@ public class Model {
         havingParams = new HashSet<>();
         orWhereParams = new HashSet<>();
         orHavingParams = new HashSet<>();
+        havingClause = null;
+        whereClause = null;
     }
 
     private void resetQueryParams() {
@@ -263,6 +296,7 @@ public class Model {
         selectColumns.clear();
         whereParams.clear();
         havingParams.clear();
+        havingClause = null;
         whereClause = null;
         orWhereParams.clear();
         orHavingParams.clear();
