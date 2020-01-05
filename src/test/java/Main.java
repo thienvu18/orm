@@ -29,7 +29,7 @@ public class Main {
 //        System.out.println(student2.create());
 //        System.out.println(student2.toString());
 
-        List<Student2> list = Model.table("students2").where("mssv", CompareOperator.EQUAL, "aaaaaaaa").fetch();
+        List<Student2> list = student.table("students2").where("mssv", CompareOperator.EQUAL, "aaaaaaaa").groupBy("mssv").fetch();
         System.out.println(list.toString());
     }
 }

@@ -8,7 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 public abstract class Connection {
     protected java.sql.Connection connection;
@@ -48,10 +50,23 @@ public abstract class Connection {
 
     protected String compileSelectQuery(SelectQuery query) {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT * ");
+        sql.append("SELECT ");
+        if (query.getSelectColumns().size() == 0) {
+            sql.append('*');
+        }
+        else {
+            String selectValue = String.join(", ", query.getSelectColumns());
+            sql.append(selectValue);
+        }
+        // From
+        sql.append(" FROM ").append(query.getTableName());
 
-        sql.append("FROM ").append(query.getTableName());
+        // Group by
+        if (query.getGroupByColumns().size() != 0) {
+            String groupByValue = String.join(", ", query.getGroupByColumns());
+            sql.append(" GROUP BY ").append(groupByValue);
 
+        }
         return sql.toString();
     }
 
