@@ -9,4 +9,6 @@ public enum CompareOperator {
     GREATER_OR_EQUAL,
     LESS_THAN,
     LESS_THAN_OR_EQUAL
+    AND,
+    OR
 }

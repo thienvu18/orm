@@ -1,5 +1,6 @@
 package mtkhdt.n9.connection;
 
+import mtkhdt.n9.query.DeleteQuery;
 import mtkhdt.n9.query.CompareOperator;
 import mtkhdt.n9.query.InsertQuery;
 import mtkhdt.n9.query.ModifyQuery;
@@ -15,10 +16,9 @@ import java.util.Set;
 
 public abstract class Connection {
     protected java.sql.Connection connection;
-
     protected abstract void open() throws ClassNotFoundException, SQLException;
-
     protected abstract void close() throws SQLException;
+    protected abstract String compileDeleteQuery(DeleteQuery query);
 
     protected String compileInsertQuery(InsertQuery query) {
         StringBuilder sql = new StringBuilder();
@@ -169,6 +169,15 @@ public abstract class Connection {
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
         long rows = preparedStatement.executeUpdate();
 
+        close();
+        return rows;
+    }
+
+    public long executeDeleteQuery(DeleteQuery query) throws SQLException, ClassNotFoundException {
+        open();
+        String sql = compileDeleteQuery(query);
+        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        long rows = preparedStatement.executeUpdate();
         close();
         return rows;
     }
