@@ -4,9 +4,11 @@ import mtkhdt.n9.annotation.Column;
 import mtkhdt.n9.annotation.PrimaryKey;
 import mtkhdt.n9.annotation.Table;
 import mtkhdt.n9.connection.ConnectionProvider;
-import mtkhdt.n9.connection.ConnectionProvider;
+import mtkhdt.n9.query.CompareOperator;
+import mtkhdt.n9.query.InsertQuery;
+import mtkhdt.n9.query.ModifyQuery;
+import mtkhdt.n9.query.SelectQuery;
 import org.javatuples.Triplet;
-import mtkhdt.n9.query.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
