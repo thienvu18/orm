@@ -177,9 +177,9 @@ public class Model {
             QueryClause temp = new MonoQueryClause(column, operator, value);
             whereClause = new BinaryQueryClause(temp, CompareOperator.AND,whereClause);
         }
-        if (columnsData.containsKey(column)) {
-            whereParams.add(new Triplet<>(column, operator, value));
-        }
+//        if (columnsData.containsKey(column)) {
+//            whereParams.add(new Triplet<>(column, operator, value));
+//        }
 
         return (T) this;
     }
@@ -192,9 +192,9 @@ public class Model {
             QueryClause temp = new MonoQueryClause(column, operator, value);
             whereClause = new BinaryQueryClause(temp, CompareOperator.OR,whereClause);
         }
-        if (columnsData.containsKey(column)) {
-            whereParams.add(new Triplet<>(column, operator, value));
-        }
+//        if (columnsData.containsKey(column)) {
+//            whereParams.add(new Triplet<>(column, operator, value));
+//        }
 
         return (T) this;
     }
