@@ -1,26 +1,18 @@
 package mtkhdt.n9.query;
 
-import org.javatuples.Triplet;
+import mtkhdt.n9.model.QueryClause;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class ModifyQuery extends Query {
-    private Set<Triplet<String, CompareOperator, Object>> whereParams;
-    private Set<Triplet<String, CompareOperator, Object>> orWhereParams;
+    QueryClause whereClause;
 
-    public ModifyQuery(String tableName, Map<String, Object> columnsData, Set<Triplet<String, CompareOperator, Object>> whereParams, Set<Triplet<String, CompareOperator, Object>> orWhereParams) {
-        super(tableName, columnsData);
-        this.whereParams = whereParams;
-        this.orWhereParams = orWhereParams;
+    public ModifyQuery(String tableName, Map<String, Object> modifiedColumns, QueryClause whereClause) {
+        super(tableName, modifiedColumns);
+        this.whereClause = whereClause;
     }
 
-    public Set<Triplet<String, CompareOperator, Object>> getWhereParams() {
-        return new HashSet<>(whereParams);
-    }
-
-    public Set<Triplet<String, CompareOperator, Object>> getOrWhereParams() {
-        return new HashSet<>(orWhereParams);
+    public QueryClause getWhereClause() {
+        return whereClause;
     }
 }

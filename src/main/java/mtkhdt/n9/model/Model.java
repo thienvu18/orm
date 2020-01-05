@@ -4,17 +4,15 @@ import mtkhdt.n9.annotation.Column;
 import mtkhdt.n9.annotation.PrimaryKey;
 import mtkhdt.n9.annotation.Table;
 import mtkhdt.n9.connection.ConnectionProvider;
-import org.javatuples.Triplet;
 import mtkhdt.n9.query.*;
+import org.javatuples.Pair;
+import org.javatuples.Triplet;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.*;
 
 public class Model {
@@ -24,16 +22,14 @@ public class Model {
     private Map<String, Object> columnsData;
     private Map<String, Object> oldColumnsData;
 
-    private Set<String> selectColumns;
     private ArrayList<String> groupByColumns;
-    private Set<Triplet<String, CompareOperator, Object>> whereParams;
+    //    private Set<Triplet<String, CompareOperator, Object>> whereParams;
+//    private Set<Triplet<String, CompareOperator, Object>> orWhereParams;
+//    private Set<Triplet<String, CompareOperator, Object>> havingParams;
+//    private Set<Triplet<String, CompareOperator, Object>> orHavingParams;
     private QueryClause whereClause;
+    private Triplet<Pair<HavingFunction, String>, CompareOperator, Object> havingClause;
 
-    private Set<Triplet<String, CompareOperator, Object>> orWhereParams;
-    private Set<Triplet<String, CompareOperator, Object>> havingParams;
-    private QueryClause whereClause;
-    private Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingClause;
-    private Set<Triplet<String, CompareOperator, Object>> orHavingParams;
 
     public Model() {
         columnsData = new LinkedHashMap<>();
@@ -41,37 +37,16 @@ public class Model {
         setModelSchemaFromAnnotations();
     }
 
-    public Model(String tableName) {
-        columnsData = new LinkedHashMap<>();
-        initQueryParams();
-        this.tableName = tableName;
-    }
-
-    public Model(Class c) {
-        columnsData = new LinkedHashMap<>();
-        initQueryParams();
-        setModelSchemaFromAnnotations(c);
-    }
-
-    public static Model table(String tableName) {
-        return new Model(tableName);
-    }
-
-    // Fix lại hàm table ở trên.  Phải truyền  model vào thì mới có columnData được
-    public static Model table(Class c) {
-        return new Model(c);
-    }
-
     //Get list object
     public <T extends Model> List<T> fetch() throws SQLException, ClassNotFoundException {
         SelectQuery query = buildSelectQuery();
-        ResultSet rs = ConnectionProvider.getInstance().getConnection().executeSelectQuery(query);
+        List<Map<String, Object>> list = ConnectionProvider.getInstance().getConnection().executeSelectQuery(query);
         ArrayList<T> models = new ArrayList<>();
 
-        while (rs.next()) {
+        for (Map<String, Object> row : list) {
             T model = newInstance();
             model.tableName = tableName;
-            model.mapResultSetToColumnsData(rs);
+            model.mapListResultToColumnsData(row);
             model.mapColumnsDataToField();
             models.add(model);
         }
@@ -130,8 +105,10 @@ public class Model {
     public <T extends Model> T refresh() throws SQLException, ClassNotFoundException {
         makeWhereParamForSelfUpdate();
         SelectQuery query = buildSelectQuery();
-        ResultSet rs = ConnectionProvider.getInstance().getConnection().executeSelectQuery(query);
-        mapResultSetToColumnsData(rs);
+        List<Map<String, Object>> list = ConnectionProvider.getInstance().getConnection().executeSelectQuery(query);
+        if (list.size() >= 1) {
+            mapListResultToColumnsData(list.get(0));
+        }
         mapColumnsDataToField();
         resetQueryParams();
         return (T) this;
@@ -151,17 +128,6 @@ public class Model {
         delete();
     }
 
-
-    public <T extends Model> T select(String... columns) {
-        for (String column : columns) {
-            if (columnsData.containsKey(column)) {
-                selectColumns.add(column);
-            }
-        }
-
-        return (T) this;
-    }
-
     public <T extends Model> T groupBy(String... columns) {
         for (String column : columns) {
             if (columnsData.containsKey(column)) {
@@ -175,14 +141,10 @@ public class Model {
     public <T extends Model> T where(String column, CompareOperator operator, Object value) {
         if (whereClause == null) {
             whereClause = new MonoQueryClause(column, operator, value);
-        }
-        else {
+        } else {
             QueryClause temp = new MonoQueryClause(column, operator, value);
-            whereClause = new BinaryQueryClause(temp, CompareOperator.AND,whereClause);
+            whereClause = new BinaryQueryClause(temp, CompareOperator.AND, whereClause);
         }
-//        if (columnsData.containsKey(column)) {
-//            whereParams.add(new Triplet<>(column, operator, value));
-//        }
 
         return (T) this;
     }
@@ -190,30 +152,21 @@ public class Model {
     public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
         if (whereClause == null) {
             whereClause = new MonoQueryClause(column, operator, value);
-        }
-        else {
+        } else {
             QueryClause temp = new MonoQueryClause(column, operator, value);
-            whereClause = new BinaryQueryClause(temp, CompareOperator.OR,whereClause);
+            whereClause = new BinaryQueryClause(temp, CompareOperator.OR, whereClause);
         }
+
+        return (T) this;
+    }
+
+//    public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
 //        if (columnsData.containsKey(column)) {
-//            whereParams.add(new Triplet<>(column, operator, value));
+//            orWhereParams.add(new Triplet<>(column, operator, value));
 //        }
-
-        return (T) this;
-    }
-
-    public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
-        if (columnsData.containsKey(column)) {
-            orWhereParams.add(new Triplet<>(column, operator, value));
-        }
-
-        return (T) this;
-    }
-
-    public <T extends Model> T where(QueryClause queryClause) {
-        whereClause = queryClause;
-        return (T) this;
-    }
+//
+//        return (T) this;
+//    }
 
 //    public <T extends Model> T having(String column, CompareOperator operator, Object value) {
 //        if (columnsData.containsKey(column)) {
@@ -222,17 +175,17 @@ public class Model {
 //        return (T) this;
 //    }
 
+//    public <T extends Model> T orHaving(String column, CompareOperator operator, Object value) {
+//        if (columnsData.containsKey(column)) {
+//            orHavingParams.add(new Triplet<>(column, operator, value));
+//        }
+//
+//        return (T) this;
+//    }
+
     public <T extends Model> T having(HavingFunction havingFunction, String column, CompareOperator operator, Object value) {
         if (columnsData.containsKey(column)) {
             havingClause = new Triplet<>(new Pair<HavingFunction, String>(havingFunction, column), operator, value);
-        }
-
-        return (T) this;
-    }
-
-    public <T extends Model> T orHaving(String column, CompareOperator operator, Object value) {
-        if (columnsData.containsKey(column)) {
-            orHavingParams.add(new Triplet<>(column, operator, value));
         }
 
         return (T) this;
@@ -246,12 +199,12 @@ public class Model {
 
     private SelectQuery buildSelectQuery() {
         //TODO: Build select query
-        return new SelectQuery(tableName, columnsData, selectColumns, groupByColumns, whereClause, havingClause);
+        return new SelectQuery(tableName, columnsData, groupByColumns, whereClause, havingClause);
     }
 
     private ModifyQuery buildModifyQuery() {
         //TODO: Build update, delete query
-        return new ModifyQuery(tableName, getModifiedColumnsValue(), whereParams, orWhereParams);
+        return new ModifyQuery(tableName, getModifiedColumnsValue(), whereClause);
     }
 
     private DeleteQuery buildDeleteQuery() {
@@ -282,60 +235,29 @@ public class Model {
 
     private void initQueryParams() {
         groupByColumns = new ArrayList<>();
-        selectColumns = new HashSet<>();
-        whereParams = new HashSet<>();
-        havingParams = new HashSet<>();
-        orWhereParams = new HashSet<>();
-        orHavingParams = new HashSet<>();
+//        whereParams = new HashSet<>();
+//        havingParams = new HashSet<>();
+//        orWhereParams = new HashSet<>();
+//        orHavingParams = new HashSet<>();
         havingClause = null;
         whereClause = null;
     }
 
     private void resetQueryParams() {
         groupByColumns.clear();
-        selectColumns.clear();
-        whereParams.clear();
-        havingParams.clear();
+//        whereParams.clear();
+//        havingParams.clear();
+//        orWhereParams.clear();
+//        orHavingParams.clear();
         havingClause = null;
         whereClause = null;
-        orWhereParams.clear();
-        orHavingParams.clear();
     }
 
     private void makeWhereParamForSelfUpdate() {
-        whereParams.clear();
-        whereParams.add(new Triplet<>(pkColumn, CompareOperator.EQUAL, columnsData.get(pkColumn)));
+//        whereParams.clear();
+//        whereParams.add(new Triplet<>(pkColumn, CompareOperator.EQUAL, columnsData.get(pkColumn)));
+        this.where(pkColumn, CompareOperator.EQUAL, columnsData.get(pkColumn));
     }
-
-    private void setModelSchemaFromAnnotations(Class c) {
-        for (; c != null && c != Object.class; c = c.getSuperclass()) {
-            if (c.isAnnotationPresent(Table.class)) {
-                Annotation annotation = c.getAnnotation(Table.class);
-                Table bc = (Table) annotation;
-                this.tableName = getDbTableName(bc.name());
-            }
-
-            Field[] fields = c.getDeclaredFields();
-            for (Field field : fields) {
-                if (field.isAnnotationPresent(Column.class)) {
-                    String column = field.getName().toLowerCase();
-
-                    if (field.isAnnotationPresent(PrimaryKey.class)) {
-                        this.pkColumn = column;
-                    }
-
-                    this.columnsData.put(column, null);
-                }
-            }
-        }
-
-        if (pkColumn == null) {
-            this.pkAutoIncrement = true;
-            this.pkColumn = "id";
-            this.columnsData.put(pkColumn, 0);
-        }
-    }
-
 
     private void setModelSchemaFromAnnotations() {
         for (Class c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
@@ -371,7 +293,7 @@ public class Model {
 
         Map<String, Object> modifiedColumnsValue = new LinkedHashMap<>();
 
-        columnsData.forEach((column, data)-> {
+        columnsData.forEach((column, data) -> {
             Object oldData = oldColumnsData.get(column);
             if (data != null && !data.equals(oldData)) {
                 modifiedColumnsValue.put(column, data);
@@ -422,51 +344,8 @@ public class Model {
         }
     }
 
-    protected void mapResultSetToColumnsData(ResultSet rs) throws SQLException {
-        ResultSetMetaData meta = rs.getMetaData();
-        int cols = meta.getColumnCount();
-
-        for (int col = 1; col <= cols; col++) {
-            String table = meta.getTableName(col).toLowerCase();
-            String key = meta.getColumnName(col).toLowerCase();
-            int type = meta.getColumnType(col);
-            Object val;
-
-            // TODO need more
-            switch (type) {
-                case Types.BIT:
-                case Types.TINYINT:
-                case Types.BOOLEAN:
-                    val = rs.getBoolean(col);
-                    break;
-
-                case Types.SMALLINT:
-                case Types.INTEGER:
-                    val = rs.getInt(col);
-                    break;
-
-                case Types.BIGINT:
-                    val = rs.getLong(col);
-                    break;
-
-                case Types.VARCHAR:
-                case Types.LONGVARCHAR:
-                    val = rs.getString(col);
-                    break;
-
-                case Types.TIMESTAMP:
-                    val = rs.getTimestamp(col);
-                    break;
-
-                default:
-                    throw new RuntimeException(String.format("Unknown column type! %s(%d) %s on column %s",
-                            meta.getColumnTypeName(col), type, meta.getColumnClassName(col), key));
-            }
-
-            if (table.equals(tableName)) {
-                columnsData.put(key, val);
-            }
-        }
+    protected void mapListResultToColumnsData(Map<String, Object> row) throws SQLException {
+        columnsData = new HashMap<>(row);
         oldColumnsData = new LinkedHashMap<>(columnsData);
     }
 }
