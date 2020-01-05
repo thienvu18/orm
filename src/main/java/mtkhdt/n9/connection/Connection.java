@@ -47,7 +47,12 @@ public abstract class Connection {
     }
 
     protected String compileSelectQuery(SelectQuery query) {
-        return "";
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT * ");
+
+        sql.append("FROM ").append(query.getTableName());
+
+        return sql.toString();
     }
 
     protected String compileModifyQuery(ModifyQuery query) {
