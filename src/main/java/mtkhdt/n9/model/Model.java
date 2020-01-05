@@ -100,6 +100,9 @@ public class Model {
     //Insert current object
     public <T extends Model> T create() throws SQLException, ClassNotFoundException {
         mapFieldToColumnsData();
+
+        if (columnsData.size() == 0) throw new RuntimeException("No data to create");
+
         InsertQuery query = buildInsertQuery();
         if (pkAutoIncrement) {
             long id = ConnectionProvider.getInstance().getConnection().executeInsertQuery(query, true);
