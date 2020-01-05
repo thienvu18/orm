@@ -1,5 +1,6 @@
 package mtkhdt.n9.connection;
 
+import mtkhdt.n9.query.DeleteQuery;
 import mtkhdt.n9.query.InsertQuery;
 import mtkhdt.n9.query.ModifyQuery;
 import mtkhdt.n9.query.SelectQuery;
@@ -8,9 +9,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
 
 public abstract class Connection {
     protected java.sql.Connection connection;
@@ -19,75 +17,13 @@ public abstract class Connection {
 
     protected abstract void close() throws SQLException;
 
-    protected String compileInsertQuery(InsertQuery query) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("INSERT INTO ");
-        sql.append(query.getTableName());
+    protected abstract String compileInsertQuery(InsertQuery query);
 
-        Map<String, Object> columnsValue = query.getColumnsData();
+    protected abstract String compileSelectQuery(SelectQuery query);
 
-        sql.append("(");
-        columnsValue.forEach((column, value) -> {
-            sql.append(column);
-            sql.append(",");
-        });
-        sql.setLength(sql.length() - 1);
-        sql.append(") ");
+    protected abstract String compileModifyQuery(ModifyQuery query);
 
-        sql.append("VALUES (");
-        columnsValue.forEach((column, value) -> {
-            sql.append("'");
-            sql.append(value);
-            sql.append("',");
-        });
-        sql.setLength(sql.length() - 1);
-        sql.append(");");
-
-        System.out.println(sql.toString());
-
-        return sql.toString();
-    }
-
-    protected String compileSelectQuery(SelectQuery query) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("SELECT ");
-        if (query.getSelectColumns().size() == 0) {
-            sql.append('*');
-        }
-        else {
-            String selectValue = String.join(", ", query.getSelectColumns());
-            sql.append(selectValue);
-        }
-        // From
-        sql.append(" FROM ").append(query.getTableName());
-
-        // Group by
-        if (query.getGroupByColumns().size() != 0) {
-            String groupByValue = String.join(", ", query.getGroupByColumns());
-            sql.append(" GROUP BY ").append(groupByValue);
-
-        }
-        return sql.toString();
-    }
-
-    protected String compileModifyQuery(ModifyQuery query) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("UPDATE ").append(query.getTableName()).append(" SET ");
-        Map<String, Object> updateColumns = query.getColumnsData();
-
-        updateColumns.forEach((column, value) -> {
-            sql.append(column);
-            sql.append("=");
-            sql.append("'");
-            sql.append(value);
-            sql.append("', ");
-        });
-        sql.setLength(sql.length() - 2);
-        sql.append(";");
-
-        System.out.println(sql.toString());
-        return sql.toString();
-    }
+    protected abstract String compileDeleteQuery(DeleteQuery query);
 
     public long executeInsertQuery(InsertQuery query, boolean returnGeneratedKeys) throws SQLException, ClassNotFoundException {
         open();
@@ -126,6 +62,15 @@ public abstract class Connection {
         PreparedStatement preparedStatement = connection.prepareStatement(sql);
         long rows = preparedStatement.executeUpdate();
 
+        close();
+        return rows;
+    }
+
+    public long executeDeleteQuery(DeleteQuery query) throws SQLException, ClassNotFoundException {
+        open();
+        String sql = compileDeleteQuery(query);
+        PreparedStatement preparedStatement = connection.prepareStatement(sql);
+        long rows = preparedStatement.executeUpdate();
         close();
         return rows;
     }

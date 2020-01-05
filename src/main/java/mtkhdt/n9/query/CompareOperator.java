@@ -4,4 +4,6 @@ package mtkhdt.n9.query;
 public enum CompareOperator {
     EQUAL,
     IN,
+    AND,
+    OR
 }
