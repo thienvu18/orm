@@ -27,6 +27,8 @@ public class Model {
     private Set<String> selectColumns;
     private ArrayList<String> groupByColumns;
     private Set<Triplet<String, CompareOperator, Object>> whereParams;
+    private QueryClause whereClause;
+
     private Set<Triplet<String, CompareOperator, Object>> havingParams;
 
     public Model() {
@@ -41,8 +43,19 @@ public class Model {
         this.tableName = tableName;
     }
 
+    public Model(Class c) {
+        columnsData = new LinkedHashMap<>();
+        initQueryParams();
+        setModelSchemaFromAnnotations(c);
+    }
+
     public static Model table(String tableName) {
         return new Model(tableName);
+    }
+
+    // Fix lại hàm table ở trên.  Phải truyền  model vào thì mới có columnData được
+    public static Model table(Class c) {
+        return new Model(c);
     }
 
     //Get list object
@@ -75,9 +88,8 @@ public class Model {
 
     //Delete list object
     public long delete() throws SQLException, ClassNotFoundException {
-        ModifyQuery query = buildModifyQuery();
-        long rows = ConnectionProvider.getInstance().getConnection().executeModifyQuery(query);
-
+        DeleteQuery query = buildDeleteQuery();
+        long rows = ConnectionProvider.getInstance().getConnection().executeDeleteQuery(query);
         resetQueryParams();
         return rows;
     }
@@ -92,6 +104,7 @@ public class Model {
 //        mapColumnsDataToField();
 //        return (T) this;
 //    }
+
 
     //Insert current object
     public <T extends Model> T create() throws SQLException, ClassNotFoundException {
@@ -165,6 +178,11 @@ public class Model {
         return (T) this;
     }
 
+    public <T extends Model> T where(QueryClause queryClause) {
+        whereClause = queryClause;
+        return (T) this;
+    }
+
     public <T extends Model> T having(String column, CompareOperator operator, Object value) {
         if (columnsData.containsKey(column)) {
             havingParams.add(new Triplet<>(column, operator, value));
@@ -187,6 +205,11 @@ public class Model {
     private ModifyQuery buildModifyQuery() {
         //TODO: Build update, delete query
         return new ModifyQuery(tableName, columnsData);
+    }
+
+    private DeleteQuery buildDeleteQuery() {
+        //TODO: Build update, delete query
+        return new DeleteQuery(tableName, whereClause);
     }
 
     private String getDbTableName(String objectTableName) {
@@ -222,12 +245,43 @@ public class Model {
         selectColumns.clear();
         whereParams.clear();
         havingParams.clear();
+        whereClause = null;
     }
 
     private void makeWhereParamForSelfUpdate() {
         whereParams.clear();
         whereParams.add(new Triplet<>(pkColumn, CompareOperator.EQUAL, columnsData.get(pkColumn)));
     }
+
+    private void setModelSchemaFromAnnotations(Class c) {
+        for (; c != null && c != Object.class; c = c.getSuperclass()) {
+            if (c.isAnnotationPresent(Table.class)) {
+                Annotation annotation = c.getAnnotation(Table.class);
+                Table bc = (Table) annotation;
+                this.tableName = getDbTableName(bc.name());
+            }
+
+            Field[] fields = c.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.isAnnotationPresent(Column.class)) {
+                    String column = field.getName().toLowerCase();
+
+                    if (field.isAnnotationPresent(PrimaryKey.class)) {
+                        this.pkColumn = column;
+                    }
+
+                    this.columnsData.put(column, null);
+                }
+            }
+        }
+
+        if (pkColumn == null) {
+            this.pkAutoIncrement = true;
+            this.pkColumn = "id";
+            this.columnsData.put(pkColumn, 0);
+        }
+    }
+
 
     private void setModelSchemaFromAnnotations() {
         for (Class c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
