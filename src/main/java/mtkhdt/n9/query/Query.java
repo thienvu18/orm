@@ -21,4 +21,33 @@ public abstract class Query {
         columnsData.forEach(map::put);
         return map;
     }
+
+    public String getOperatorFromEnum(CompareOperator operatorEnum) {
+        String operator = "";
+        switch (operatorEnum) {
+            case EQUAL:
+                operator = "=";
+                break;
+            case IN:
+                operator = "IN";
+                break;
+            case NOT_EQUAL:
+                operator = "<>";
+                break;
+            case GREATER:
+                operator = ">";
+                break;
+            case GREATER_OR_EQUAL:
+                operator = ">=";
+                break;
+            case LESS_THAN:
+                operator = "<";
+                break;
+            case LESS_THAN_OR_EQUAL:
+                operator = "<=";
+                break;
+        }
+
+        return operator;
+    }
 }

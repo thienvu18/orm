@@ -25,11 +25,14 @@ public class Model {
     private String pkColumn;
     private boolean pkAutoIncrement;
     private Map<String, Object> columnsData;
+    private Map<String, Object> oldColumnsData;
 
     private Set<String> selectColumns;
     private ArrayList<String> groupByColumns;
     private Set<Triplet<String, CompareOperator, Object>> whereParams;
+    private Set<Triplet<String, CompareOperator, Object>> orWhereParams;
     private Set<Triplet<String, CompareOperator, Object>> havingParams;
+    private Set<Triplet<String, CompareOperator, Object>> orHavingParams;
 
     public Model() {
         columnsData = new LinkedHashMap<>();
@@ -67,10 +70,9 @@ public class Model {
 
     //Update list object
     public long update() throws SQLException, ClassNotFoundException {
+        mapFieldToColumnsData();
         ModifyQuery query = buildModifyQuery();
-        long rows = ConnectionProvider.getInstance().getConnection().executeModifyQuery(query);
-        //TODO: Map rs to list object
-
+        long rows = ConnectionProvider.getInstance().getConnection().executeUpdateQuery(query);
         resetQueryParams();
         return rows;
     }
@@ -78,7 +80,7 @@ public class Model {
     //Delete list object
     public long delete() throws SQLException, ClassNotFoundException {
         ModifyQuery query = buildModifyQuery();
-        long rows = ConnectionProvider.getInstance().getConnection().executeModifyQuery(query);
+        long rows = ConnectionProvider.getInstance().getConnection().executeDeleteQuery(query);
 
         resetQueryParams();
         return rows;
@@ -124,16 +126,13 @@ public class Model {
     //Update current object to DB
     public <T extends Model> T save() throws SQLException, ClassNotFoundException {
         makeWhereParamForSelfUpdate();
-        mapFieldToColumnsData();
         update();
-        resetQueryParams();
         return (T) this;
     }
 
     //Delete current object
     public void remove() throws SQLException, ClassNotFoundException {
         makeWhereParamForSelfUpdate();
-        resetQueryParams();
         resetQueryParams();
         delete();
     }
@@ -167,9 +166,25 @@ public class Model {
         return (T) this;
     }
 
+    public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
+        if (columnsData.containsKey(column)) {
+            orWhereParams.add(new Triplet<>(column, operator, value));
+        }
+
+        return (T) this;
+    }
+
     public <T extends Model> T having(String column, CompareOperator operator, Object value) {
         if (columnsData.containsKey(column)) {
             havingParams.add(new Triplet<>(column, operator, value));
+        }
+
+        return (T) this;
+    }
+
+    public <T extends Model> T orHaving(String column, CompareOperator operator, Object value) {
+        if (columnsData.containsKey(column)) {
+            orHavingParams.add(new Triplet<>(column, operator, value));
         }
 
         return (T) this;
@@ -188,7 +203,7 @@ public class Model {
 
     private ModifyQuery buildModifyQuery() {
         //TODO: Build update, delete query
-        return new ModifyQuery(tableName, columnsData);
+        return new ModifyQuery(tableName, getModifiedColumnsValue(), whereParams, orWhereParams);
     }
 
     private String getDbTableName(String objectTableName) {
@@ -217,6 +232,8 @@ public class Model {
         selectColumns = new HashSet<>();
         whereParams = new HashSet<>();
         havingParams = new HashSet<>();
+        orWhereParams = new HashSet<>();
+        orHavingParams = new HashSet<>();
     }
 
     private void resetQueryParams() {
@@ -224,6 +241,8 @@ public class Model {
         selectColumns.clear();
         whereParams.clear();
         havingParams.clear();
+        orWhereParams.clear();
+        orHavingParams.clear();
     }
 
     private void makeWhereParamForSelfUpdate() {
@@ -260,7 +279,23 @@ public class Model {
         }
     }
 
+    private Map<String, Object> getModifiedColumnsValue() {
+        if (oldColumnsData == null) return new LinkedHashMap<>(columnsData);
+
+        Map<String, Object> modifiedColumnsValue = new LinkedHashMap<>();
+
+        columnsData.forEach((column, data)-> {
+            Object oldData = oldColumnsData.get(column);
+            if (data != null && !data.equals(oldData)) {
+                modifiedColumnsValue.put(column, data);
+            }
+        });
+
+        return modifiedColumnsValue;
+    }
+
     private void mapFieldToColumnsData() {
+        oldColumnsData = new LinkedHashMap<>(columnsData);
         for (Class c = this.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
             Field[] fields = c.getDeclaredFields();
             for (Field field : fields) {
@@ -345,5 +380,6 @@ public class Model {
                 columnsData.put(key, val);
             }
         }
+        oldColumnsData = new LinkedHashMap<>(columnsData);
     }
 }
