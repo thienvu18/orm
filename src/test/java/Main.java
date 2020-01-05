@@ -5,6 +5,7 @@ import mtkhdt.n9.model.Model;
 import mtkhdt.n9.model.MonoQueryClause;
 import mtkhdt.n9.model.QueryClause;
 import mtkhdt.n9.query.CompareOperator;
+import mtkhdt.n9.query.HavingFunction;
 
 import java.util.List;
 
@@ -45,8 +46,10 @@ public class Main {
         Model.table(Student2.class)
                 .where("mssv", CompareOperator.EQUAL, 2)
                 .where("name", CompareOperator.EQUAL, "Hai Au")
-                .or("name", CompareOperator.EQUAL, "Hai Anh")
-                .delete();
+                .orWhere("name", CompareOperator.EQUAL, "Hai Anh")
+                .groupBy("mssv")
+                .having(HavingFunction.COUNT, "mssv", CompareOperator.EQUAL, "123")
+                .fetch();
 
         //vi du xoa het bang
         Model.table(Student2.class)

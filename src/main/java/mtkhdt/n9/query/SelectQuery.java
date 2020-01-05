@@ -1,5 +1,7 @@
 package mtkhdt.n9.query;
 
+import mtkhdt.n9.model.QueryClause;
+import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
 import java.util.ArrayList;
@@ -7,23 +9,30 @@ import java.util.Map;
 import java.util.Set;
 
 public class SelectQuery extends Query {
+    QueryClause whereClause;
+    private Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingClause;
     private Set<String> selectColumns;
     private ArrayList<String> groupByColumns;
     private Set<Triplet<String, CompareOperator, Object>> whereParams;
     private Set<Triplet<String, CompareOperator, Object>> havingParams;
 
+
     public SelectQuery(String tableName, Map<String, Object> columnsData, Set<String> selectColumns,
-                       ArrayList<String> groupByColumns, Set<Triplet<String, CompareOperator, Object>> whereParams,
-                       Set<Triplet<String, CompareOperator, Object>> havingParams) {
+                       ArrayList<String> groupByColumns, QueryClause whereClause,
+                       Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingClause) {
         super(tableName, columnsData);
         this.selectColumns = selectColumns;
         this.groupByColumns = groupByColumns;
-        this.whereParams = whereParams;
-        this.havingParams = havingParams;
+        this.whereClause = whereClause;
+        this.havingClause = havingClause;
     }
 
-    public Set<String> getSelectColumns() {
-        return selectColumns;
+    public QueryClause getWhereClause() {
+        return whereClause;
+    }
+
+    public Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> getHavingClause() {
+        return havingClause;
     }
 
     public ArrayList<String> getGroupByColumns() {
@@ -37,4 +46,9 @@ public class SelectQuery extends Query {
     public Set<Triplet<String, CompareOperator, Object>> getHavingParams() {
         return havingParams;
     }
+
+    public Set<String> getSelectColumns() {
+        return selectColumns;
+    }
+
 }

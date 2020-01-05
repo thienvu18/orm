@@ -5,6 +5,7 @@ import mtkhdt.n9.annotation.PrimaryKey;
 import mtkhdt.n9.annotation.Table;
 import mtkhdt.n9.connection.ConnectionProvider;
 import mtkhdt.n9.query.*;
+import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
 import java.lang.annotation.Annotation;
@@ -26,9 +27,9 @@ public class Model {
     private Set<String> selectColumns;
     private ArrayList<String> groupByColumns;
     private Set<Triplet<String, CompareOperator, Object>> whereParams;
-    private QueryClause whereClause;
-
     private Set<Triplet<String, CompareOperator, Object>> havingParams;
+    private QueryClause whereClause;
+    private Triplet<Pair<HavingFunction ,String>, CompareOperator, Object> havingClause;
 
     public Model() {
         columnsData = new LinkedHashMap<>();
@@ -184,7 +185,7 @@ public class Model {
         return (T) this;
     }
 
-    public <T extends Model> T or(String column, CompareOperator operator, Object value) {
+    public <T extends Model> T orWhere(String column, CompareOperator operator, Object value) {
         if (whereClause == null) {
             whereClause = new MonoQueryClause(column, operator, value);
         }
@@ -204,11 +205,17 @@ public class Model {
         return (T) this;
     }
 
-    public <T extends Model> T having(String column, CompareOperator operator, Object value) {
-        if (columnsData.containsKey(column)) {
-            havingParams.add(new Triplet<>(column, operator, value));
-        }
+//    public <T extends Model> T having(String column, CompareOperator operator, Object value) {
+//        if (columnsData.containsKey(column)) {
+//            havingParams.add(new Triplet<>(column, operator, value));
+//        }
+//        return (T) this;
+//    }
 
+    public <T extends Model> T having(HavingFunction havingFunction, String column, CompareOperator operator, Object value) {
+        if (columnsData.containsKey(column)) {
+            havingClause = new Triplet<>(new Pair<HavingFunction, String>(havingFunction, column), operator, value);
+        }
         return (T) this;
     }
 
@@ -220,7 +227,7 @@ public class Model {
 
     private SelectQuery buildSelectQuery() {
         //TODO: Build select query
-        return new SelectQuery(tableName, columnsData, selectColumns, groupByColumns, whereParams, havingParams);
+        return new SelectQuery(tableName, columnsData, selectColumns, groupByColumns, whereClause, havingClause);
     }
 
     private ModifyQuery buildModifyQuery() {
@@ -259,6 +266,8 @@ public class Model {
         selectColumns = new HashSet<>();
         whereParams = new HashSet<>();
         havingParams = new HashSet<>();
+        havingClause = null;
+        whereClause = null;
     }
 
     private void resetQueryParams() {
@@ -266,6 +275,7 @@ public class Model {
         selectColumns.clear();
         whereParams.clear();
         havingParams.clear();
+        havingClause = null;
         whereClause = null;
     }
 
