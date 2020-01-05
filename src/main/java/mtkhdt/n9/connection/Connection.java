@@ -8,14 +8,66 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 
 public abstract class Connection {
     protected java.sql.Connection connection;
+
     protected abstract void open() throws ClassNotFoundException, SQLException;
+
     protected abstract void close() throws SQLException;
-    protected abstract String compileInsertQuery(InsertQuery query);
-    protected abstract String compileSelectQuery(SelectQuery query);
-    protected abstract String compileModifyQuery(ModifyQuery query);
+
+    protected String compileInsertQuery(InsertQuery query) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("INSERT INTO ");
+        sql.append(query.getTableName());
+
+        Map<String, Object> columnsValue = query.getColumnsData();
+
+        sql.append("(");
+        columnsValue.forEach((column, value) -> {
+            sql.append(column);
+            sql.append(",");
+        });
+        sql.setLength(sql.length() - 1);
+        sql.append(") ");
+
+        sql.append("VALUES (");
+        columnsValue.forEach((column, value) -> {
+            sql.append("'");
+            sql.append(value);
+            sql.append("',");
+        });
+        sql.setLength(sql.length() - 1);
+        sql.append(");");
+
+        System.out.println(sql.toString());
+
+        return sql.toString();
+    }
+
+    protected String compileSelectQuery(SelectQuery query) {
+        return "";
+    }
+
+    protected String compileModifyQuery(ModifyQuery query) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("UPDATE ").append(query.getTableName()).append(" SET ");
+        Map<String, Object> updateColumns = query.getColumnsData();
+
+        updateColumns.forEach((column, value) -> {
+            sql.append(column);
+            sql.append("=");
+            sql.append("'");
+            sql.append(value);
+            sql.append("', ");
+        });
+        sql.setLength(sql.length() - 2);
+        sql.append(";");
+
+        System.out.println(sql.toString());
+        return sql.toString();
+    }
 
     public long executeInsertQuery(InsertQuery query, boolean returnGeneratedKeys) throws SQLException, ClassNotFoundException {
         open();
